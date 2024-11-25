@@ -1,0 +1,131 @@
+---
+title: "Demand Analysis for Company X"
+format: html
+date: "2015-01-15"
+date-modified: "2024-11-25"
+---
+
+# Task
+
+TASKS (do not delete formulas+ add your comments if needed)
+
+1. CE, Nordic, Other areas total 2015 sales estimation: 500 000pcs. However, we expect (compared to 2014 sales):
+A. Scenario 1
+a. 5% increase of the CE share 
+b. 2% decrease of Other share
+c. 3% decrease of Nordic share
+
+B. Scenario 2
+a. 10% increase of the CE share
+b. 1% decrease of Other share
+c.  9% decrease of Nordic share
+Regarding the product mix, we expect 10% growth of prodgroup 134 in all areas
+
+Using the information in this workbook, please calculate estimation 2015 for Scenario 1 and 2 by items and sales areas as shown below. Please make it so that we could choose Scenario 1 or 2. All 0 values should be blank. Formatting is up to you
+
+2. Please make a comparison between Forecast 2015 Scenario 1 and sales 2014 both on total and item level (no sales area split is needed). Use charts if you want
+
+
+# Conclusion from 2013
+
+"Task 1
+Scenario 1 for three market areas is calculated using rate of change information given in the assignment. For Scenario 2, I created a custom filter (a combination of Excels IF and OR functions) for identifying “prodgroup 134” from different market areas (see Sales 2014 sheet). 
+
+For scenario selection I created two “option buttons”, this approach utilizes Excels IF functions for viewing scenarios in different sales areas. I also calculated Prodgroup 1 and item 1 in the tables, since Progroup 1 only contains item 1 and is sold only in the CE area, cells for other market areas remain blank."
+
+"Task 2
+I used Excels SUMIF functions to combine possible duplicate items on sales 2014 and 2015 list. For comparison, I created a chart for items and total sales.
+"
+
+# libraries
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+
+# data import
+
+```{r}
+sales2014 <- read_excel("Excel test juha paallysaho.xlsx", sheet = 2, range = cell_cols("A:C")) |> janitor::clean_names()
+
+mapping <- read_excel("Excel test juha paallysaho.xlsx", sheet = 3) |> janitor::clean_names()
+```
+
+
+
+```{r}
+df <- sales2014 |> full_join(mapping)
+```
+
+
+# Scenarios
+
+## Scenario 1
+
+1. CE, Nordic, Other areas total 2015 sales estimation: 500 000pcs. However, we expect (compared to 2014 sales):
+A. Scenario 1
+a. 5% increase of the CE share 
+b. 2% decrease of Other share
+c. 3% decrease of Nordic share
+
+
+```{r}
+df
+yearly_sales_2014 <- df |>
+  group_by(sales_area) |>
+  summarise(total_sales_2014 = sum(sales_2014))
+yearly_sales_2014
+
+
+yearly_sales_scenario_1 <- yearly_sales_2014 |> mutate(
+  estimate_2015_scenario_1 = case_when(
+    sales_area == "CE" ~ total_sales_2014 * 1.05,
+    sales_area == "Other" ~ total_sales_2014 * 0.98,
+    sales_area == "Nordic" ~ total_sales_2014 * 0.97
+  )
+)
+
+yearly_sales_scenario_1
+```
+
+
+## Scenario 2
+
+a. 10% increase of the CE share
+b. 1% decrease of Other share
+c.  9% decrease of Nordic share
+Regarding the product mix, we expect 10% growth of prodgroup 134 in all areas
+
+
+```{r}
+yearly_sales_prep_scenario2 <- df |>
+  mutate(adjusted_sales_2015_prep = if_else(product_group == "prodgroup 134", sales_2014 * 1.10, sales_2014)) |>
+  group_by(sales_area) |>
+  summarise(total_sales_prep = sum(adjusted_sales_2015_prep))
+yearly_sales_prep_scenario2
+
+yearly_sales_scenatio_2 <- yearly_sales_prep_scenario2 |> transmute(
+  estimate_2015_scenario_2 = case_when(
+    sales_area == "CE" ~ total_sales_prep * 1.10,
+    sales_area == "Other" ~ total_sales_prep * 0.99,
+    sales_area == "Nordic" ~ total_sales_prep * 0.91
+  ), sales_area
+)
+yearly_sales_scenatio_2
+res <- yearly_sales_scenario_1 |> full_join(yearly_sales_scenatio_2, by = join_by("sales_area"))
+```
+
+## visualization
+visualize bar chart res
+```{r}
+res |>
+  pivot_longer(cols = c(estimate_2015_scenario_1, estimate_2015_scenario_2), names_to = "scenario", values_to = "sales") |>
+  ggplot(aes(x = sales_area, y = sales, fill = scenario)) +
+  geom_col(position = "dodge") +
+  labs(title = "Scenario 1 and 2", x = "Sales area", y = "Sales") +
+  # scale y to eur value
+  scale_y_continuous(labels = scales::label_currency(prefix = "EUR ")) +
+  theme_minimal()
+```
