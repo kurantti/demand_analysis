@@ -48,9 +48,10 @@ library(readxl)
 # data import
 
 ```{r}
-sales2014 <- read_excel("Excel test juha paallysaho.xlsx", sheet = 2, range = cell_cols("A:C")) |> janitor::clean_names()
+filename <- "Excel test.xlsx"
+sales2014 <- read_excel(filename, sheet = 2, range = cell_cols("A:C")) |> janitor::clean_names()
 
-mapping <- read_excel("Excel test juha paallysaho.xlsx", sheet = 3) |> janitor::clean_names()
+mapping <- read_excel(filename, sheet = 3) |> janitor::clean_names()
 ```
 
 
